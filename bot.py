@@ -10,7 +10,7 @@ from supabase import create_client, Client
 
 # Если задана переменная окружения, бот возьмет токен оттуда.
 # Иначе возьмет строку ниже (замени на свой токен).
-BOT_TOKEN = os.getenv("BOT_TOKEN", "ТВОЙ_ТОКЕН_ОТ_BOTFATHER")
+BOT_TOKEN = os.getenv("BOT_TOKEN", "9016203694:AAGltZobxAdPEZn3lawm210dXEfRAKHCtx8")
 
 SUPABASE_URL = "https://jckoziwygfslfsrqnqva.supabase.co"
 SUPABASE_KEY = "sb_publishable_Gg3LEIO-hequGbxdxzu4IQ_02MRg3t3"
