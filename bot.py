@@ -9,7 +9,7 @@ from aiogram.types import (
 from supabase import create_client, Client
 
 # ТВОЙ ТОКЕН
-BOT_TOKEN = "ВСТАВЬ_СЮДА_СВОЙ_ТОКЕН"
+BOT_TOKEN = "9016203694:AAGltZobxAdPEZn3lawm210dXEfRAKHCtx8"
 
 SUPABASE_URL = "https://jckoziwygfslfsrqnqva.supabase.co"
 SUPABASE_KEY = "sb_publishable_Gg3LEIO-hequGbxdxzu4IQ_02MRg3t3"
