@@ -8,9 +8,8 @@ from aiogram.types import (
 )
 from supabase import create_client, Client
 
-# Если задана переменная окружения, бот возьмет токен оттуда.
-# Иначе возьмет строку ниже (замени на свой токен).
-BOT_TOKEN = os.getenv("BOT_TOKEN", "9016203694:AAGltZobxAdPEZn3lawm210dXEfRAKHCtx8")
+# ТВОЙ ТОКЕН
+BOT_TOKEN = "ВСТАВЬ_СЮДА_СВОЙ_ТОКЕН"
 
 SUPABASE_URL = "https://jckoziwygfslfsrqnqva.supabase.co"
 SUPABASE_KEY = "sb_publishable_Gg3LEIO-hequGbxdxzu4IQ_02MRg3t3"
@@ -19,26 +18,19 @@ RADAR_URL = "https://samsasamsa1213-prog.github.io/vinera-radar/"
 
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
-supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+
+# Пробуем подключиться к базе. Если ключ неверный — бот упадет при старте.
+try:
+    supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+    print("✅ Подключение к Supabase создано")
+except Exception as e:
+    print(f"❌ ОШИБКА ПОДКЛЮЧЕНИЯ К БАЗЕ: {e}")
 
 @dp.message(CommandStart())
 async def start_handler(message: types.Message):
-    # Проверяем, есть ли уже этот пользователь в базе с телефоном
-    try:
-        response = supabase.table('profiles').select('phone').eq('telegram_id', message.from_user.id).execute()
-        if len(response.data) > 0 and response.data[0].get('phone'):
-            # Если телефон уже есть, сразу даем кнопку
-            webapp_btn = InlineKeyboardMarkup(inline_keyboard=[
-                [InlineKeyboardButton(text="🛸 Открыть Vinera Radar", web_app=WebAppInfo(url=RADAR_URL))]
-            ])
-            await message.answer("Вы уже авторизованы! 👇", reply_markup=webapp_btn)
-            return
-    except Exception as e:
-        print(f"Ошибка при проверке: {e}")
-
-    # Если телефона нет, просим контакт
     contact_btn = KeyboardButton(text="📱 Отправить мой номер", request_contact=True)
     keyboard = ReplyKeyboardMarkup(keyboard=[[contact_btn]], resize_keyboard=True, one_time_keyboard=True)
+    
     await message.answer(
         "Здравствуйте! 👋\n\n"
         "Для доступа к радару **Vinera Radar** подтвердите свой номер телефона.\n"
@@ -54,26 +46,20 @@ async def contact_handler(message: types.Message):
     username = message.from_user.username or f"user_{user_id}"
 
     try:
-        # Проверяем, есть ли профиль
-        response = supabase.table('profiles').select('*').eq('telegram_id', user_id).execute()
-        
-        if len(response.data) > 0:
-            # Обновляем номер
-            supabase.table('profiles').update({
-                'phone': phone,
-                'username': username
-            }).eq('telegram_id', user_id).execute()
-        else:
-            # Создаем новый
-            supabase.table('profiles').insert({
-                'telegram_id': user_id,
-                'username': username,
-                'phone': phone,
-                'role': 'user'
-            }).execute()
+        print(f"Попытка сохранить: ID={user_id}, Phone={phone}")
+        # Пытаемся сохранить в базу
+        supabase.table('profiles').upsert({
+            'telegram_id': user_id,
+            'username': username,
+            'phone': phone,
+            'role': 'user'
+        }).execute()
+        print("✅ Успешно сохранено в базу")
+            
     except Exception as e:
-        print(f"Supabase error: {e}")
-        await message.answer("Произошла ошибка при сохранении. Попробуйте позже.")
+        # Если произошла ошибка базы — отправляем её текст прямо в чат!
+        print(f"❌ Ошибка Supabase: {e}")
+        await message.answer(f"❌ ОШИБКА БАЗЫ:\n`{str(e)}`", parse_mode="Markdown")
         return
 
     await message.answer(
