@@ -8,13 +8,13 @@ from aiogram.types import (
 )
 from supabase import create_client, Client
 
-# 1. ВСТАВЬ СЮДА ТОКЕН ОТ BOTFATHER
+# 1. ТОКЕН ОТ BOTFATHER
 BOT_TOKEN = "9016203694:AAGltZobxAdPEZn3lawm210dXEfRAKHCtx8"
 
-# 2. ВСТАВЬ СЮДА URL ИЗ САПЕБАЗЫ (из раздела Data API)
-SUPABASE_URL = "https://hpzemwurwkuthcgmtlvw.supabase.co"
+# 2. НОВЫЙ ПРОЕКТ САПЕБАЗЫ (hpzem...)
+SUPABASE_URL = "https://hpzemwurwkuthcgmtvlw.supabase.co"
 
-# 3. ВСТАВЬ СЮДА КЛЮЧ ИЗ САПЕБАЗЫ (из раздела API Keys)
+# 3. КЛЮЧ ОТ ЭТОГО ЖЕ ПРОЕКТА (sb_publishable_...)
 SUPABASE_KEY = "sb_publishable_H5gZUb84H06cxMb1OfH5Mg_eIWaikbz"
 
 RADAR_URL = "https://samsasamsa1213-prog.github.io/vinera-radar/"
@@ -43,13 +43,12 @@ async def contact_handler(message: types.Message):
     username = message.from_user.username or f"user_{user_id}"
 
     try:
-        # Сохраняем данные напрямую в таблицу profiles
+        # Сохраняем данные в таблицу profiles
         supabase.table('profiles').upsert({
             'telegram_id': user_id,
             'username': username,
-            'phone': phone,
-            'role': 'user'
-        }).execute()
+            'phone': phone
+        }, on_conflict='telegram_id').execute()
         
         await message.answer(
             "✅ Номер подтверждён! Доступ открыт.\n\n"
