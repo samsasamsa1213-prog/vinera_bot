@@ -8,11 +8,14 @@ from aiogram.types import (
 )
 from supabase import create_client, Client
 
-# Твой токен от BotFather
+# 1. ВСТАВЬ СЮДА ТОКЕН ОТ BOTFATHER
 BOT_TOKEN = "9016203694:AAGltZobxAdPEZn3lawm210dXEfRAKHCtx8"
 
-SUPABASE_URL = "https://jckoziwygfslfsrqnqva.supabase.co"
-SUPABASE_KEY = "sb_publishable_Gg3LEIO-hequGbxdxzu4IQ_02MRg3t3"
+# 2. ВСТАВЬ СЮДА URL ИЗ САПЕБАЗЫ (из раздела Data API)
+SUPABASE_URL = "https://hpzemwurwkuthcgmtlvw.supabase.co"
+
+# 3. ВСТАВЬ СЮДА КЛЮЧ ИЗ САПЕБАЗЫ (из раздела API Keys)
+SUPABASE_KEY = "sb_publishable_H5gZUb84H06cxMb1OfH5Mg_eIWaikbz"
 
 RADAR_URL = "https://samsasamsa1213-prog.github.io/vinera-radar/"
 
@@ -40,11 +43,12 @@ async def contact_handler(message: types.Message):
     username = message.from_user.username or f"user_{user_id}"
 
     try:
-        # Вызываем нашу новую функцию в базе, чтобы обойти ошибку PGRST204
-        supabase.rpc('save_user_phone', {
-            'p_telegram_id': user_id,
-            'p_username': username,
-            'p_phone': phone
+        # Сохраняем данные напрямую в таблицу profiles
+        supabase.table('profiles').upsert({
+            'telegram_id': user_id,
+            'username': username,
+            'phone': phone,
+            'role': 'user'
         }).execute()
         
         await message.answer(
