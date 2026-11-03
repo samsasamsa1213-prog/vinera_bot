@@ -8,13 +8,12 @@ from aiogram.types import (
 )
 from supabase import create_client, Client
 
-BOT_TOKEN = os.getenv("BOT_TOKEN")
+# Если задана переменная окружения, бот возьмет токен оттуда.
+# Иначе возьмет строку ниже (замени на свой токен).
+BOT_TOKEN = os.getenv("BOT_TOKEN", "ТВОЙ_ТОКЕН_ОТ_BOTFATHER")
+
 SUPABASE_URL = "https://jckoziwygfslfsrqnqva.supabase.co"
 SUPABASE_KEY = "sb_publishable_Gg3LEIO-hequGbxdxzu4IQ_02MRg3t3"
-
-if not BOT_TOKEN:
-    print("❌ Токен не найден")
-    exit(1)
 
 RADAR_URL = "https://samsasamsa1213-prog.github.io/vinera-radar/"
 
@@ -24,7 +23,20 @@ supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 @dp.message(CommandStart())
 async def start_handler(message: types.Message):
-    # Сначала просим номер
+    # Проверяем, есть ли уже этот пользователь в базе с телефоном
+    try:
+        response = supabase.table('profiles').select('phone').eq('telegram_id', message.from_user.id).execute()
+        if len(response.data) > 0 and response.data[0].get('phone'):
+            # Если телефон уже есть, сразу даем кнопку
+            webapp_btn = InlineKeyboardMarkup(inline_keyboard=[
+                [InlineKeyboardButton(text="🛸 Открыть Vinera Radar", web_app=WebAppInfo(url=RADAR_URL))]
+            ])
+            await message.answer("Вы уже авторизованы! 👇", reply_markup=webapp_btn)
+            return
+    except Exception as e:
+        print(f"Ошибка при проверке: {e}")
+
+    # Если телефона нет, просим контакт
     contact_btn = KeyboardButton(text="📱 Отправить мой номер", request_contact=True)
     keyboard = ReplyKeyboardMarkup(keyboard=[[contact_btn]], resize_keyboard=True, one_time_keyboard=True)
     await message.answer(
@@ -39,25 +51,37 @@ async def start_handler(message: types.Message):
 async def contact_handler(message: types.Message):
     user_id = message.from_user.id
     phone = message.contact.phone_number
+    username = message.from_user.username or f"user_{user_id}"
 
-    # Сохраняем в Supabase (таблица users)
     try:
-        supabase.table('users').upsert({
-            'telegram_id': user_id,
-            'username': message.from_user.username,
-            'first_name': message.from_user.first_name,
-            'phone': phone,
-            'last_seen_at': 'now()'
-        }, on_conflict='telegram_id').execute()
+        # Проверяем, есть ли профиль
+        response = supabase.table('profiles').select('*').eq('telegram_id', user_id).execute()
+        
+        if len(response.data) > 0:
+            # Обновляем номер
+            supabase.table('profiles').update({
+                'phone': phone,
+                'username': username
+            }).eq('telegram_id', user_id).execute()
+        else:
+            # Создаем новый
+            supabase.table('profiles').insert({
+                'telegram_id': user_id,
+                'username': username,
+                'phone': phone,
+                'role': 'user'
+            }).execute()
     except Exception as e:
         print(f"Supabase error: {e}")
+        await message.answer("Произошла ошибка при сохранении. Попробуйте позже.")
+        return
 
-    # Убираем клавиатуру и даём кнопку на радар
     await message.answer(
         "✅ Номер подтверждён! Доступ открыт.\n\n"
         "Нажмите кнопку ниже, чтобы открыть радар:",
         reply_markup=ReplyKeyboardRemove()
     )
+    
     webapp_btn = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="🛸 Vinera Radar", web_app=WebAppInfo(url=RADAR_URL))]
     ])
