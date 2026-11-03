@@ -8,7 +8,7 @@ from aiogram.types import (
 )
 from supabase import create_client, Client
 
-# ТВОЙ ТОКЕН
+# Твой токен от BotFather
 BOT_TOKEN = "9016203694:AAGltZobxAdPEZn3lawm210dXEfRAKHCtx8"
 
 SUPABASE_URL = "https://jckoziwygfslfsrqnqva.supabase.co"
@@ -18,13 +18,7 @@ RADAR_URL = "https://samsasamsa1213-prog.github.io/vinera-radar/"
 
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
-
-# Пробуем подключиться к базе. Если ключ неверный — бот упадет при старте.
-try:
-    supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
-    print("✅ Подключение к Supabase создано")
-except Exception as e:
-    print(f"❌ ОШИБКА ПОДКЛЮЧЕНИЯ К БАЗЕ: {e}")
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 @dp.message(CommandStart())
 async def start_handler(message: types.Message):
@@ -46,32 +40,27 @@ async def contact_handler(message: types.Message):
     username = message.from_user.username or f"user_{user_id}"
 
     try:
-        print(f"Попытка сохранить: ID={user_id}, Phone={phone}")
-        # Пытаемся сохранить в базу
-        supabase.table('profiles').upsert({
-            'telegram_id': user_id,
-            'username': username,
-            'phone': phone,
-            'role': 'user'
+        # Вызываем нашу новую функцию в базе, чтобы обойти ошибку PGRST204
+        supabase.rpc('save_user_phone', {
+            'p_telegram_id': user_id,
+            'p_username': username,
+            'p_phone': phone
         }).execute()
-        print("✅ Успешно сохранено в базу")
-            
-    except Exception as e:
-        # Если произошла ошибка базы — отправляем её текст прямо в чат!
-        print(f"❌ Ошибка Supabase: {e}")
-        await message.answer(f"❌ ОШИБКА БАЗЫ:\n`{str(e)}`", parse_mode="Markdown")
-        return
+        
+        await message.answer(
+            "✅ Номер подтверждён! Доступ открыт.\n\n"
+            "Нажмите кнопку ниже, чтобы открыть радар:",
+            reply_markup=ReplyKeyboardRemove()
+        )
+        
+        webapp_btn = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="🛸 Vinera Radar", web_app=WebAppInfo(url=RADAR_URL))]
+        ])
+        await message.answer("👇", reply_markup=webapp_btn)
 
-    await message.answer(
-        "✅ Номер подтверждён! Доступ открыт.\n\n"
-        "Нажмите кнопку ниже, чтобы открыть радар:",
-        reply_markup=ReplyKeyboardRemove()
-    )
-    
-    webapp_btn = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="🛸 Vinera Radar", web_app=WebAppInfo(url=RADAR_URL))]
-    ])
-    await message.answer("👇", reply_markup=webapp_btn)
+    except Exception as e:
+        print(f"❌ Ошибка: {e}")
+        await message.answer(f"❌ Ошибка при сохранении: {e}")
 
 async def main():
     print("✅ Бот запущен")
